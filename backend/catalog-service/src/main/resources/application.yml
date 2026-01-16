@@ -1,6 +1,25 @@
 server:
   port: 8082
 
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/amazon_clone
+    username: postgres
+    password: postgres
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+    open-in-view: false
+
 app:
   cors:
     allowed-origins: "http://localhost:5173"
+
+supabase:
+  url: "https://talboilqtywhshrfirdi.supabase.co"
+  anon-key: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRhbGJvaWxxdHl3aHNocmZpcmRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg1NzY3MTcsImV4cCI6MjA4NDE1MjcxN30.FOHr-z4Dc4pDR13WAs80Bp0bvuGKvMcWRcKEQwCWQsA"
+  storage:
+    bucket: "product-images"

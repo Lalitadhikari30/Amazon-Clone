@@ -43,13 +43,14 @@
 
  ## 🧱 Tech Stack
 
- | Layer | Tech |
- |---|---|
- | Frontend | React (Vite), React Router, Context API, Custom CSS theme |
- | Backend | Java 17, Spring Boot 3, Spring Security, JWT (jjwt), Spring Data JPA |
- | Database (dev) | H2 (in-memory) |
- | Database (ready) | Postgres (Supabase-ready) |
- | Architecture | Microservices by domain (Auth, Catalog, Orders) |
+| Layer | Tech |
+|---|---|
+| Frontend | React (Vite), React Router, Context API, Custom CSS theme |
+| Backend | Java 17, Spring Boot 3, Spring Security, JWT (jjwt), Spring Data JPA |
+| Auth | Spring Boot JWT + BCrypt (H2) |
+| Database (catalog/orders) | Local Postgres (`amazon_clone`) |
+| File Storage | Supabase Storage (`product-images` bucket) |
+| Architecture | Microservices by domain (Auth, Catalog, Orders) |
 
  ---
 
@@ -66,15 +67,55 @@
 
  ---
 
- ## 🧭 Architecture (high-level)
+ ## 🧭 Architecture (current)
 
- ```mermaid
- flowchart LR
-   UI[React Frontend :5173] -->|HTTP| AUTH[Auth Service :8081]
-   UI -->|HTTP| CATALOG[Catalog Service :8082]
-   UI -->|HTTP + Bearer JWT| ORDERS[Orders Service :8083]
-   AUTH --> DB[(H2 / Postgres)]
- ```
+```mermaid
+flowchart TD
+  subgraph Frontend[React Frontend :5173]
+    UI[UI Components + Pages]
+    AuthCtx[Auth Context (JWT)]
+    CartCtx[Cart Context (localStorage)]
+  end
+
+  subgraph Backend[Backend Services]
+    Auth[Auth Service :8081]
+    Catalog[Catalog Service :8082]
+    Orders[Orders Service :8083]
+  end
+
+  subgraph Storage[Storage & Database]
+    SupabaseStorage[Supabase Storage<br/>product-images bucket]
+    LocalPG[(Local Postgres<br/>amazon_clone DB)]
+    H2[(H2 In-memory<br/>users table)]
+  end
+
+  %% Auth flow
+  UI -->|POST /auth/login| Auth
+  UI -->|POST /auth/register| Auth
+  Auth -->|BCrypt check| H2
+  Auth -->|JWT token| AuthCtx
+
+  %% Catalog flow
+  UI -->|GET /catalog/products| Catalog
+  UI -->|GET /catalog/products/{id}| Catalog
+  Catalog -->|Read/Write| LocalPG
+  Catalog -->|Upload/Get images| SupabaseStorage
+
+  %% Orders flow
+  UI -->|POST /orders| Orders
+  UI -->|GET /orders/my| Orders
+  AuthCtx -->|Bearer JWT| Orders
+  Orders -->|Read/Write| LocalPG
+
+  %% Styling
+  classDef frontend fill:#e0f2fe,stroke:#0ea5e9
+  classDef backend fill:#fef3c7,stroke:#f59e0b
+  classDef storage fill:#dcfce7,stroke:#22c55e
+
+  class Frontend,UI,AuthCtx,CartCtx frontend
+  class Backend,Auth,Catalog,Orders backend
+  class Storage,SupabaseStorage,LocalPG,H2 storage
+```
 
  ---
 
@@ -124,13 +165,24 @@
 
  ### 2) 🧩 Backend (Microservices)
 
- From the repository root:
+#### Prerequisites
+- **Local Postgres** running on `localhost:5432`
+  - Create database: `CREATE DATABASE amazon_clone;`
+  - Default user/pass: `postgres`/`postgres` (change in `catalog-service/src/main/resources/application.yml` if needed)
 
- ```bash
- mvn -f backend/pom.xml -pl auth-service spring-boot:run
- mvn -f backend/pom.xml -pl catalog-service spring-boot:run
- mvn -f backend/pom.xml -pl order-service spring-boot:run
- ```
+#### Start services
+From the repository root:
+
+```bash
+mvn -f backend/pom.xml -pl auth-service spring-boot:run
+mvn -f backend/pom.xml -pl catalog-service spring-boot:run
+mvn -f backend/pom.xml -pl order-service spring-boot:run
+```
+
+#### What each service uses
+- **Auth Service**: H2 in-memory (users table)
+- **Catalog Service**: Local Postgres (`amazon_clone`) + Supabase Storage for images
+- **Orders Service**: JWT validation (uses same JWT secret as auth)
 
  ---
 
