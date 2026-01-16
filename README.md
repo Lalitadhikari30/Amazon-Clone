@@ -69,52 +69,36 @@
 
  ## 🧭 Architecture (current)
 
-```mermaid
-flowchart TD
-  subgraph Frontend[React Frontend :5173]
-    UI[UI Components + Pages]
-    AuthCtx[Auth Context (JWT)]
-    CartCtx[Cart Context (localStorage)]
-  end
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     React Frontend :5173                   │
+│  ┌───────────────┐  ┌───────────────┐  ┌───────────────┐  │
+│  │   UI + Pages  │  │ Auth Context  │  │ Cart Context  │  │
+│  └───────┬───────┘  └───────┬───────┘  └───────┬───────┘  │
+└──────────┼──────────────────┼──────────────────┼───────────┘
+           │                  │                  │
+           ▼                  ▼                  ▼
+┌─────────────────────────────────────────────────────────────┐
+│                     Backend Services                        │
+│  ┌───────────────┐  ┌───────────────┐  ┌───────────────┐  │
+│  │ Auth Service  │  │Catalog Service│  │Orders Service │  │
+│  │     :8081     │  │     :8082     │  │     :8083     │  │
+│  └───────┬───────┘  └───────┬───────┘  └───────┬───────┘  │
+└──────────┼──────────────────┼──────────────────┼───────────┘
+           │                  │                  │
+           ▼                  ▼                  ▼
+┌─────────────────────────────────────────────────────────────┐
+│                 Storage & Databases                           │
+│  ┌───────────────┐  ┌───────────────┐  ┌───────────────┐  │
+│  │ Supabase      │  │ Local Postgres │  │      H2       │  │
+│  │ Storage       │  │ amazon_clone  │  │   (users)     │  │
+│  └───────────────┘  └───────────────┘  └───────────────┘  │
+└─────────────────────────────────────────────────────────────┘
 
-  subgraph Backend[Backend Services]
-    Auth[Auth Service :8081]
-    Catalog[Catalog Service :8082]
-    Orders[Orders Service :8083]
-  end
-
-  subgraph Storage[Storage & Database]
-    SupabaseStorage[Supabase Storage<br/>product-images bucket]
-    LocalPG[(Local Postgres<br/>amazon_clone DB)]
-    H2[(H2 In-memory<br/>users table)]
-  end
-
-  %% Auth flow
-  UI -->|POST /auth/login| Auth
-  UI -->|POST /auth/register| Auth
-  Auth -->|BCrypt check| H2
-  Auth -->|JWT token| AuthCtx
-
-  %% Catalog flow
-  UI -->|GET /catalog/products| Catalog
-  UI -->|GET /catalog/products/{id}| Catalog
-  Catalog -->|Read/Write| LocalPG
-  Catalog -->|Upload/Get images| SupabaseStorage
-
-  %% Orders flow
-  UI -->|POST /orders| Orders
-  UI -->|GET /orders/my| Orders
-  AuthCtx -->|Bearer JWT| Orders
-  Orders -->|Read/Write| LocalPG
-
-  %% Styling
-  classDef frontend fill:#e0f2fe,stroke:#0ea5e9
-  classDef backend fill:#fef3c7,stroke:#f59e0b
-  classDef storage fill:#dcfce7,stroke:#22c55e
-
-  class Frontend,UI,AuthCtx,CartCtx frontend
-  class Backend,Auth,Catalog,Orders backend
-  class Storage,SupabaseStorage,LocalPG,H2 storage
+Flows:
+• UI → Auth Service → H2 → JWT back to UI
+• UI → Catalog Service → Local Postgres + Supabase Storage
+• UI → Orders Service (JWT) → Local Postgres
 ```
 
  ---
